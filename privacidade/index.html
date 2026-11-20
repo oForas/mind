@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Privacidade — Mind</title>
+    <meta name="description" content="Como o Mind cuida das suas notas: o que é guardado, o que nunca é coletado e como apagar tudo." />
+    <meta name="theme-color" content="#ebebea" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ebebea;
+        --ink: #0d0d0d;
+        --muted: #555553;
+        --led: #38e6b0;
+        --term: #060807;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        width: min(720px, 100%);
+        margin: 0 auto;
+        padding: 20px 16px max(32px, env(safe-area-inset-bottom, 0px));
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+      }
+      .nav a {
+        color: var(--ink);
+        text-decoration: none;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+      }
+      .nav a:hover,
+      .nav a:focus-visible {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .win {
+        margin-top: 24px;
+        border: 3px solid var(--ink);
+        background: #f4f4f2;
+        box-shadow: 8px 8px 0 rgba(13, 13, 13, 0.14);
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 30px;
+        padding: 0 10px;
+        background: var(--ink);
+        color: var(--led);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+      }
+      .bar i {
+        width: 10px;
+        height: 10px;
+        background: var(--led);
+      }
+      .body {
+        padding: clamp(18px, 4.5vw, 36px);
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(22px, 5vw, 30px);
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        line-height: 1.2;
+      }
+      .kicker {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h2::before {
+        content: '';
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-right: 10px;
+        vertical-align: 1px;
+        background: var(--led);
+        box-shadow: 0 0 0 1px var(--ink);
+      }
+      p,
+      ul {
+        margin: 0 0 10px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin-bottom: 4px;
+      }
+      a {
+        color: var(--ink);
+        text-underline-offset: 3px;
+      }
+      :focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+      .foot {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="nav">
+        <a href="../">← MIND</a>
+        <a href="https://instagram.com/z.foras" target="_blank" rel="noopener">Contato</a>
+      </header>
+
+      <main class="win">
+        <div class="bar"><span>PRIVACIDADE.TXT</span><i aria-hidden="true"></i></div>
+        <div class="body">
+          <h1>Privacidade</h1>
+          <p class="kicker">Atualizado em 17 de novembro de 2026.</p>
+
+          <p>
+            O Mind é um app para anotar ideias, tarefas, planos e lembranças. O que você escreve é seu: ele
+            existe para guardar as suas notas, não para olhar para elas.
+          </p>
+
+          <h2>O que fica guardado</h2>
+          <ul>
+            <li>
+              <b>No seu aparelho:</b> notas, diário, tarefas, planos, pessoas e fotos ficam salvos no próprio
+              PC ou celular, e o app funciona sem internet.
+            </li>
+            <li>
+              <b>Na sua conta (se você criar uma):</b> o nome de usuário ou e-mail e uma cópia das suas notas e
+              fotos, para sincronizar entre o PC e o celular. Ficam num banco de dados do Supabase, protegido
+              para que só a sua conta tenha acesso.
+            </li>
+            <li>
+              <b>Sem conta:</b> nada sai do aparelho.
+            </li>
+          </ul>
+
+          <h2>O que nunca é coletado</h2>
+          <ul>
+            <li>Não há anúncios.</li>
+            <li>Não há rastreamento, estatísticas de uso nem identificadores de publicidade.</li>
+            <li>Nada é vendido nem compartilhado com outras empresas.</li>
+          </ul>
+
+          <h2>Atualizações</h2>
+          <p>
+            Para saber se há versão nova, o app de PC consulta o GitHub (onde as versões ficam publicadas) e o
+            app do celular consulta o próprio site. Isso não envia nada sobre você nem sobre as suas notas.
+          </p>
+
+          <h2>Apagar tudo</h2>
+          <p>
+            Em <b>Configurações → Conta → Excluir conta</b>, a conta e todas as cópias guardadas nela são
+            apagadas de vez. Para apagar o que está no aparelho, desinstale o app (no PC) ou limpe os dados do
+            site (no celular).
+          </p>
+
+          <h2>Contato</h2>
+          <p>
+            Dúvidas sobre os seus dados: fale com o desenvolvedor pelo Instagram
+            <a href="https://instagram.com/z.foras" target="_blank" rel="noopener">@z.foras</a>.
+          </p>
+        </div>
+      </main>
+
+      <p class="foot">Mind · desenvolvido por z.foras</p>
+    </div>
+  </body>
+</html>

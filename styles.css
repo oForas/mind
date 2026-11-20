@@ -1,0 +1,890 @@
+/* Mind — landing pixelada (teste)
+   Uma seção: menu, título MIND em pixels, subtítulo, Ready?/Download e o cérebro em scanlines.
+   Breakpoints: <360 · 360–479 · 480–767 · 768–1023 · 1024–1279 · 1280–1535 · ≥1536 */
+
+:root {
+  color-scheme: light;
+  --bg: #ebebea;
+  --ink: #0d0d0d;
+  --muted: #555553;
+  --led: #38e6b0;
+  --led-soft: rgba(56, 230, 176, 0.55);
+  --term: #060807;
+
+  /* Faixa 1 (< 360): valores base; as faixas seguintes só sobrescrevem */
+  --gutter: 16px;
+  --nav-h: 56px;
+  --logo-px: 2px; /* pixel do logo */
+  --px: 6px; /* pixel do título MIND (41 × 9 pixels) */
+  --dot: 2px; /* ponto da matriz LED do botão */
+  --sub: 12px;
+  --small: 11.5px;
+  --gap: calc(var(--px) * 2); /* título → subtítulo: colado no MIND, proporcional ao pixel */
+  --lower-gap: 18px; /* subtítulo → botão */
+  --copy-top: 6px;
+  --visual-h: 230px;
+  --glow-x: 50%;
+  --glow-y: 76%;
+}
+
+@supports (width: round(down, 10.5px, 1px)) {
+  :root {
+    --px: round(down, calc((100vw - 2 * var(--gutter)) * 0.92 / 41), 1px);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(65% 55% at var(--glow-x) var(--glow-y), rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 72%),
+    linear-gradient(180deg, #efefee 0%, #e6e6e4 100%);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: var(--small);
+  line-height: 1.5;
+  overflow-x: hidden;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scanlines bem leves sobre a página inteira, como uma tela antiga. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.022) 0 1px, transparent 1px 4px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+/* ---------- Estrutura ---------- */
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--nav-h);
+  padding: 0 var(--gutter);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+}
+
+.logo {
+  display: inline-flex;
+  margin-left: -6px;
+  padding: 6px;
+  color: var(--ink);
+}
+
+.logo__px {
+  display: block;
+  /* Cérebro em pixel (30×22), o mesmo símbolo do app. */
+  width: calc(20 * var(--logo-px));
+  height: calc(15 * var(--logo-px));
+  fill: currentColor;
+}
+
+.logo__body {
+  fill: #f7f7f5;
+}
+
+.links {
+  display: flex;
+  gap: clamp(18px, 2.4vw, 40px);
+}
+
+.links a {
+  position: relative;
+  padding: 6px 0;
+  font-size: var(--small);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+/* Sublinhado que "carrega" em pixels. */
+.links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.24s steps(6);
+}
+
+.links a:hover::after,
+.links a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.links__wide {
+  display: none;
+}
+
+.hero {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  overflow: hidden; /* o canvas nunca cria rolagem enquanto se ajusta */
+  padding: 0 var(--gutter) calc(var(--gutter) * 0.5);
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding-top: var(--copy-top);
+}
+
+.title {
+  margin: 0;
+  line-height: 0;
+}
+
+.title__px {
+  display: block;
+  width: calc(41 * var(--px));
+  height: calc(9 * var(--px));
+  fill: var(--ink);
+}
+
+/* Os pixels do título acendem em ordem aleatória (atraso gerado no HTML).
+   Com menos movimento, o título só aparece suavemente. */
+.motion .title__px rect {
+  animation: px-on 150ms steps(1, end) calc(var(--d, 0ms) + 260ms) both;
+}
+
+:root:not(.motion) .title {
+  animation: enter-fade 0.9s ease 0.2s both;
+}
+
+@keyframes px-on {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.15;
+  }
+  75%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.lower {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lower-gap);
+}
+
+.sub {
+  margin: 0;
+  font-size: var(--sub);
+  line-height: 1.6;
+}
+
+.sub span {
+  display: block;
+  white-space: nowrap;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.foot span {
+  margin: 0 6px;
+  color: #9a9a98;
+}
+
+.visual {
+  position: relative;
+  flex: 1;
+  min-height: var(--visual-h);
+}
+
+.visual canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
+}
+
+/* ---------- Mãos pontilhadas (atrás de tudo) ---------- */
+
+.hands {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.brain-shadow {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.hand {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  opacity: 0;
+  image-rendering: pixelated;
+}
+
+.hand.is-ready {
+  animation: enter-fade 1.4s ease 0.45s both;
+}
+
+/* Chegam dos cantos e depois "respiram": aproximam-se do cérebro e voltam devagar. */
+.motion .hand.is-ready {
+  animation:
+    hand-in 1.9s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both,
+    hand-drift 7.5s ease-in-out 2.3s infinite alternate;
+}
+
+.motion .hand--r.is-ready {
+  animation-delay: 0.55s, 2.9s;
+  animation-duration: 1.9s, 8.6s;
+}
+
+@keyframes hand-in {
+  from {
+    opacity: 0;
+    translate: var(--fx, 0) var(--fy, 0);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes hand-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--dx, 0), var(--dy, 0));
+  }
+}
+
+/* ---------- Rodapé ---------- */
+
+.foot {
+  position: relative;
+  z-index: 2;
+  padding: 0 var(--gutter) max(12px, env(safe-area-inset-bottom, 0px));
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.foot a {
+  color: #6a6a68;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.foot a:hover,
+.foot a:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Entrada suave ---------- */
+
+.enter {
+  animation: enter-fade 0.9s ease var(--in, 0ms) both;
+}
+
+.motion .enter {
+  animation: enter-up 1s cubic-bezier(0.22, 0.61, 0.36, 1) var(--in, 0ms) both;
+}
+
+.motion .enter--fade {
+  animation-name: enter-fade;
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Botão Ready? / Download (matriz LED) ---------- */
+
+.btn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--led);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn__face {
+  --c: var(--dot);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: calc(var(--dot) * 3.5) calc(var(--dot) * 5);
+  background-color: #111;
+  /* Cantos em degrau, como pixels. */
+  clip-path: polygon(
+    0 calc(2 * var(--c)),
+    var(--c) calc(2 * var(--c)),
+    var(--c) var(--c),
+    calc(2 * var(--c)) var(--c),
+    calc(2 * var(--c)) 0,
+    calc(100% - 2 * var(--c)) 0,
+    calc(100% - 2 * var(--c)) var(--c),
+    calc(100% - var(--c)) var(--c),
+    calc(100% - var(--c)) calc(2 * var(--c)),
+    100% calc(2 * var(--c)),
+    100% calc(100% - 2 * var(--c)),
+    calc(100% - var(--c)) calc(100% - 2 * var(--c)),
+    calc(100% - var(--c)) calc(100% - var(--c)),
+    calc(100% - 2 * var(--c)) calc(100% - var(--c)),
+    calc(100% - 2 * var(--c)) 100%,
+    calc(2 * var(--c)) 100%,
+    calc(2 * var(--c)) calc(100% - var(--c)),
+    var(--c) calc(100% - var(--c)),
+    var(--c) calc(100% - 2 * var(--c)),
+    0 calc(100% - 2 * var(--c))
+  );
+  transition: background-color 0.2s steps(3);
+}
+
+.btn:hover .btn__face {
+  background-color: #000;
+}
+
+.btn:active .btn__face {
+  transform: translateY(1px);
+}
+
+.btn__led svg {
+  display: block;
+  height: calc(8 * var(--dot));
+}
+
+.btn__led .on {
+  fill: var(--led);
+}
+
+/* Cursor de terminal piscando (sempre, como um cursor de texto). */
+.btn__led .cur {
+  animation: blink 1.05s steps(1) infinite;
+}
+
+.motion .btn:hover .btn__led .arr {
+  animation: bob 0.7s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(1px);
+  }
+}
+
+.btn__txt {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.btn.has-led .btn__txt {
+  display: none;
+}
+
+/* ---------- Popup de download (janela retrô) ---------- */
+
+.dl {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+}
+
+.dl[hidden] {
+  display: none;
+}
+
+.dl__backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(235, 235, 234, 0.55);
+  background-image: repeating-conic-gradient(rgba(13, 13, 13, 0.08) 0 25%, transparent 0 50%);
+  background-size: 4px 4px;
+  opacity: 0;
+  transition: opacity 0.2s steps(4);
+}
+
+.dl__win {
+  position: relative;
+  width: min(560px, 100%);
+  border: 3px solid var(--led);
+  background: var(--term);
+  color: var(--led);
+  box-shadow: 10px 10px 0 rgba(13, 13, 13, 0.2);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.motion .dl__win {
+  transform: scale(0.25);
+  transition:
+    transform 0.26s steps(5),
+    opacity 0.1s steps(2);
+}
+
+.dl.is-open .dl__backdrop {
+  opacity: 1;
+}
+
+.dl.is-open .dl__win {
+  opacity: 1;
+  transform: none;
+}
+
+/* Scanlines e um leve brilho de tubo dentro da janela. */
+.dl__win::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(56, 230, 176, 0.045) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 40%, rgba(56, 230, 176, 0.06), transparent 70%);
+}
+
+.dl__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  background: var(--led);
+  color: var(--term);
+}
+
+.dl__name {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+.dl__ctrls {
+  display: flex;
+  gap: 4px;
+}
+
+.dl__ctrl {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: var(--term);
+  color: var(--led);
+}
+
+.dl__ctrl svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.dl__x {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Área de toque maior que o desenho do X. */
+.dl__x::before {
+  content: '';
+  position: absolute;
+  inset: -11px -4px -11px -6px;
+}
+
+.dl__x:hover {
+  background: #000;
+  color: #fff;
+}
+
+.dl__x:focus-visible {
+  outline: 2px solid var(--term);
+  outline-offset: 1px;
+}
+
+.dl__body {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 4.5vw, 32px);
+}
+
+.dl__title {
+  margin: 0;
+  font-size: clamp(20px, 5.2vw, 28px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-shadow: 0 0 8px rgba(56, 230, 176, 0.45);
+}
+
+.dl__dots {
+  display: inline-block;
+  width: 3ch;
+  overflow: hidden;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.dl__dots::after {
+  content: '...';
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: dots 1.2s steps(4) infinite;
+}
+
+@keyframes dots {
+  from {
+    width: 0;
+  }
+  to {
+    width: 4ch;
+  }
+}
+
+.dl.is-done .dl__dots {
+  display: none;
+}
+
+.dl__row {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2.6vw, 16px);
+}
+
+.dl__meter {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  height: clamp(28px, 7vw, 36px);
+  padding: 3px;
+  border: 3px solid var(--led);
+}
+
+.dl__meter i {
+  flex: 1;
+  background: var(--led);
+  box-shadow: 0 0 6px rgba(56, 230, 176, 0.45);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.dl__pct {
+  min-width: 4ch;
+  font-size: clamp(18px, 4.6vw, 26px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-shadow: 0 0 8px rgba(56, 230, 176, 0.45);
+}
+
+.dl__note {
+  min-height: 1.6em;
+  margin: 0;
+  font-size: 13px;
+  color: rgba(56, 230, 176, 0.82);
+}
+
+.dl__note a {
+  color: var(--led);
+  text-underline-offset: 3px;
+}
+
+.dl__help {
+  display: block;
+  margin-top: 10px;
+  color: rgba(56, 230, 176, 0.68);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dl__help b {
+  color: var(--led);
+  font-weight: 500;
+}
+
+/* Link opcional da Microsoft Store (sem o aviso do Windows). */
+.dl__store {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.dl__note a:focus-visible {
+  outline-color: var(--led);
+}
+
+/* ---------- Breakpoints ---------- */
+
+/* 2 · 360–479 */
+@media (min-width: 360px) {
+  :root {
+    --nav-h: 60px;
+    --dot: 3px;
+    --sub: 13px;
+    --small: 12px;
+    --lower-gap: 20px;
+    --copy-top: clamp(8px, 3svh, 40px);
+    --visual-h: clamp(240px, 40svh, 340px);
+  }
+}
+
+/* 3 · 480–767 */
+@media (min-width: 480px) {
+  :root {
+    --gutter: 24px;
+    --nav-h: 64px;
+    --sub: 14px;
+    --small: 12.5px;
+    --lower-gap: 22px;
+    --copy-top: clamp(12px, 4svh, 48px);
+    --visual-h: clamp(260px, 44svh, 440px);
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, min(calc((100vw - 2 * var(--gutter)) * 0.78 / 41), 13px), 1px);
+    }
+  }
+}
+
+/* 4 · 768–1023 */
+@media (min-width: 768px) {
+  :root {
+    --gutter: 32px;
+    --nav-h: 72px;
+    --logo-px: 2px;
+    --sub: 15px;
+    --small: 13px;
+    --lower-gap: 24px;
+    --copy-top: 20px;
+    --visual-h: clamp(320px, 50svh, 600px);
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, min(calc((100vw - 2 * var(--gutter)) * 0.6 / 41), 15px), 1px);
+    }
+  }
+
+  .links__wide {
+    display: inline;
+  }
+}
+
+/* 5 · 1024–1279: duas colunas, como a referência */
+@media (min-width: 1024px) {
+  :root {
+    --nav-h: 76px;
+    --px: 9px;
+    --sub: 15px;
+    --small: 13px;
+    --lower-gap: 26px;
+    --copy-top: 0px;
+    --glow-x: 70%;
+    --glow-y: 54%;
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, calc(100vw * 0.0092), 1px);
+    }
+  }
+
+  .hero {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .copy {
+    flex: 0 0 42%;
+    justify-content: center;
+    padding-bottom: 2svh;
+  }
+
+  .visual {
+    min-height: 0;
+  }
+}
+
+/* 6 · 1280–1535 */
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 40px;
+    --nav-h: 80px;
+    --px: 11px;
+    --sub: 16px;
+    --small: 13.5px;
+    --lower-gap: 28px;
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, calc(100vw * 0.0088), 1px);
+    }
+  }
+}
+
+/* 7 · ≥ 1536 */
+@media (min-width: 1536px) {
+  :root {
+    --gutter: clamp(48px, 3vw, 80px);
+    --nav-h: 88px;
+    --logo-px: 3px;
+    --px: 13px;
+    --dot: 4px;
+    --sub: clamp(17px, 0.95vw, 22px);
+    --small: clamp(14px, 0.75vw, 17px);
+    --lower-gap: 32px;
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, min(calc(100vw * 0.0086), 22px), 1px);
+    }
+  }
+}
+
+/* Celular deitado e telas baixas: duas colunas, tudo mais compacto. */
+@media (orientation: landscape) and (max-height: 560px) and (min-width: 600px) {
+  :root {
+    --nav-h: 52px;
+    --lower-gap: 16px;
+    --copy-top: 0px;
+    --glow-x: 70%;
+    --glow-y: 54%;
+  }
+
+  @supports (width: round(down, 10.5px, 1px)) {
+    :root {
+      --px: round(down, min(calc(100vw * 0.0085), calc(100svh * 0.022)), 1px);
+    }
+  }
+
+  .hero {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .copy {
+    flex: 0 0 46%;
+    justify-content: center;
+  }
+
+  .visual {
+    min-height: 0;
+  }
+}
+
+/* Sem a classe "motion" (sistema pedindo menos movimento): nada desliza, só aparece. */
+:root:not(.motion) .links a::after {
+  transition: none;
+}
