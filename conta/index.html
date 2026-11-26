@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#130F1A" />
+    <title>Sua conta · Mind</title>
+    <link rel="icon" type="image/png" href="../app/icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      main.conta {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px 16px;
+      }
+      .conta-card {
+        width: 100%;
+        max-width: 400px;
+        padding: 28px 24px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+      .conta-card h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      .conta-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .conta-card form {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .conta-card label {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .conta-card input {
+        min-height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+        font-size: 16px;
+      }
+      .conta-card input:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      .conta-card button {
+        min-height: 44px;
+        border: none;
+        border-radius: 12px;
+        background: var(--grad);
+        color: var(--bg);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .conta-card button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      .conta-card button:focus-visible {
+        outline: 2px solid var(--text);
+        outline-offset: 2px;
+      }
+      #erro {
+        color: #e3a17e;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="conta">
+      <section class="conta-card">
+        <h1 id="titulo">Sua conta do Mind</h1>
+        <p id="texto">Este endereço abre os links que o Mind envia por e-mail.</p>
+
+        <form id="form" hidden>
+          <label>
+            Senha nova
+            <input id="senha" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <label>
+            Repita a senha nova
+            <input
+              id="repetir"
+              type="password"
+              autocomplete="new-password"
+              minlength="6"
+              required
+            />
+          </label>
+          <p id="erro" role="alert" hidden></p>
+          <button id="salvar" type="submit">Salvar senha nova</button>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      // Recebe os links dos e-mails do Mind. O Supabase traz o resultado depois do "#":
+      //   type=recovery + access_token → criar a senha nova
+      //   type=signup (ou outro) + access_token → conta confirmada
+      //   error_code → link vencido ou já usado
+      const SUPABASE_URL = 'https://rbmkdysyycuwhoydelzy.supabase.co';
+      const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJibWtkeXN5eWN1d2hveWRlbHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0ODEzOTgsImV4cCI6MjEwOTA1NzM5OH0.rWECeTxRbbvsWNRsEj-z4uRiyA-or7hbcH0xusNmTQo';
+
+      const el = (id) => document.getElementById(id);
+      const show = (title, text) => {
+        el('titulo').textContent = title;
+        el('texto').textContent = text;
+      };
+
+      const params = new URLSearchParams(location.hash.slice(1));
+      const token = params.get('access_token');
+      const type = params.get('type');
+      // O token não fica no endereço (nem no histórico) depois de lido.
+      if (location.hash) history.replaceState(null, '', location.pathname);
+
+      if (params.get('error') || params.get('error_code')) {
+        show(
+          'Este link não vale mais',
+          'Ele venceu ou já foi usado. Abra o Mind e peça outro: "Esqueci a senha" para trocar a senha, ou entre com sua conta para reenviar a confirmação.',
+        );
+      } else if (token && type === 'recovery') {
+        show('Crie uma senha nova', 'Ela vale para o Mind em todos os seus aparelhos.');
+        el('form').hidden = false;
+        el('senha').focus();
+      } else if (token) {
+        show('Conta confirmada!', 'Tudo certo. Volte para o Mind e entre com seu e-mail e senha.');
+      }
+
+      el('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const senha = el('senha').value;
+        const erro = el('erro');
+        erro.hidden = true;
+        if (senha !== el('repetir').value) {
+          erro.textContent = 'As duas senhas estão diferentes.';
+          erro.hidden = false;
+          return;
+        }
+        el('salvar').disabled = true;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            method: 'PUT',
+            headers: {
+              apikey: ANON_KEY,
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password: senha }),
+          });
+          if (res.ok) {
+            el('form').hidden = true;
+            show('Senha nova salva!', 'Volte para o Mind e entre com seu e-mail e a senha nova.');
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          const msg = data.msg || data.message || data.error_description || '';
+          if (/different from the old/i.test(msg)) {
+            erro.textContent = 'A senha nova precisa ser diferente da antiga.';
+          } else if (/at least/i.test(msg)) {
+            erro.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+          } else if (res.status === 401 || res.status === 403) {
+            erro.textContent = 'Este link venceu. Abra o Mind e peça outro em "Esqueci a senha".';
+          } else {
+            erro.textContent = 'Não foi possível salvar agora. Tente de novo.';
+          }
+        } catch {
+          erro.textContent = 'Sem conexão. Confira a internet e tente de novo.';
+        }
+        erro.hidden = false;
+        el('salvar').disabled = false;
+      });
+    </script>
+  </body>
+</html>

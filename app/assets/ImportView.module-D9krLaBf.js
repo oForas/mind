@@ -1,0 +1,1 @@
+var e={cards:`_cards_1andt_1`,card:`_card_1andt_1`,icon:`_icon_1andt_24`,title:`_title_1andt_28`,text:`_text_1andt_33`,result:`_result_1andt_47`,summary:`_summary_1andt_53`,spin:`_spin_1andt_61`};export{e as t};
